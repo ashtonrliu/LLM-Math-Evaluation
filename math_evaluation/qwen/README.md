@@ -1,0 +1,1 @@
+The code in this folder is adapted from https://github.com/ruixin31/Spurious_Rewards/tree/main/code/ttrl/verifier/qwen
