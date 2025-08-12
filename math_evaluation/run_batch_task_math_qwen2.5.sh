@@ -38,11 +38,11 @@ MODEL_NAMES=(
 
 # 模型路径列表，需要和MODEL_NAMES一一对应
 MODEL_PATHS=(
-    your_path_to/Qwen2.5/Qwen2.5-Math-7B
-    your_path_to/Qwen2.5/Qwen2.5-Math-7B-Instruct
-    your_path_to/Qwen2.5/Qwen2.5-7B
-    your_path_to/Qwen2.5/Qwen2.5-7B-Instruct
-)
+    /home/aliu/dev/models/Qwen2.5/Qwen2.5-Math-7B
+    /home/aliu/dev/models/Qwen2.5/Qwen2.5-Math-7B-Instruct
+    /home/aliu/dev/models/Qwen2.5/Qwen2.5-7B
+    /home/aliu/dev/models/Qwen2.5/Qwen2.5-7B-Instruct
+/)
 
 # 打分方法
 GRADE_METHOD=normal     # 正常评分
@@ -59,6 +59,9 @@ for ((i = 0; i < ${#MODEL_NAMES[@]}; i++)); do
         for ((k = 0; k < ${#RATIOS[@]}; k++)); do
             RATIO=${RATIOS[k]}
             # 不应用模板且不采样
+            # bash run_eval_template_vllm.sh --model_name ${MODEL_NAME} --model_path ${MODEL_PATH}  --prompt_ratio ${RATIO} --num_rollout ${NUM_ROLLOUT} --dataset_name ${DATASET_NAME} --dataset_path ${DATASET_PATH} --gen_mode ${GEN_MODE} --apply_template ${APPLY_TEMPLATE} --grade_method ${GRADE_METHOD} --task_info ${TASK_INFO}
+            # exit 
+
             NUM_ROLLOUT=01; GEN_MODE="greedy";  APPLY_TEMPLATE="0";     TASK_INFO="greedy_only"
             bash run_eval_template_vllm.sh --model_name ${MODEL_NAME} --model_path ${MODEL_PATH}  --prompt_ratio ${RATIO} --num_rollout ${NUM_ROLLOUT} --dataset_name ${DATASET_NAME} --dataset_path ${DATASET_PATH} --gen_mode ${GEN_MODE} --apply_template ${APPLY_TEMPLATE} --grade_method ${GRADE_METHOD} --task_info ${TASK_INFO}
 
@@ -74,6 +77,7 @@ for ((i = 0; i < ${#MODEL_NAMES[@]}; i++)); do
             NUM_ROLLOUT=16; GEN_MODE="sample";  APPLY_TEMPLATE="1";     TASK_INFO="template_sample"
             bash run_eval_template_vllm.sh --model_name ${MODEL_NAME} --model_path ${MODEL_PATH}  --prompt_ratio ${RATIO} --num_rollout ${NUM_ROLLOUT} --dataset_name ${DATASET_NAME} --dataset_path ${DATASET_PATH} --gen_mode ${GEN_MODE} --apply_template ${APPLY_TEMPLATE} --grade_method ${GRADE_METHOD} --task_info ${TASK_INFO}
 
+            
         done
     done
 done
@@ -86,3 +90,6 @@ MINUTES=$(((DURATION % 3600) / 60))
 SECONDS=$((DURATION % 60))
 echo "运行结束，总耗时：${HOURS}小时${MINUTES}分钟${SECONDS}秒"
 
+# /home/aliu/models/Qwen2.5
+
+bash run_eval_template_vllm.sh --model_name vllm_qwen_2.5_math_7b --model_path /home/aliu/dev/models/Qwen2.5/Qwen2.5-Math-7B  --prompt_ratio 60% --num_rollout ${NUM_ROLLOUT} --dataset_name ${DATASET_NAME} --dataset_path ${DATASET_PATH} --gen_mode ${GEN_MODE} --apply_template ${APPLY_TEMPLATE} --grade_method ${GRADE_METHOD} --task_info ${TASK_INFO}

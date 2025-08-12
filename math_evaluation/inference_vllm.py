@@ -86,25 +86,31 @@ def create_worker(grade_method):
 def load_model(model_path, gen_kwargs=None):
     print("Loading tokenizer ...")
     tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-    print("Loading model ...")
-    model = AutoModelForCausalLM.from_pretrained(model_path, device_map="auto", trust_remote_code=True).eval()
-    generation_config = GenerationConfig.from_pretrained(model_path, trust_remote_code=True)
 
+    # Ensure pad token and left-padding for causal LMs
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.padding_side = "left"
+
+    print("Loading model ...")
+    # Option 1: single GPU (simplest)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_path, trust_remote_code=True, torch_dtype="auto"
+    ).to("cuda").eval()
+
+    # (If you MUST shard across GPUs, keep device_map="auto" BUT then
+    # don't move inputs to model.device; leave them on CPU. See note below.)
+
+    generation_config = GenerationConfig.from_pretrained(model_path, trust_remote_code=True)
     if gen_kwargs:
-        print(f"🔧 Applying custom generation config from JSON:")
         for k, v in gen_kwargs.items():
             if hasattr(generation_config, k):
                 setattr(generation_config, k, v)
-                print(f"  ✅ {k} = {v}")
-            else:
-                print(f"  ⚠️ generation_config has no attribute: {k}, ignoring.")
-
     model.generation_config = generation_config
-
-    print(model)
-    print(model.generation_config)
+    model.config.pad_token_id = tokenizer.pad_token_id
+    model.config.eos_token_id = tokenizer.eos_token_id
     return model, tokenizer
-
 
 def decode(tokens_list, tokenizer, raw_text_len):
     sents = []
@@ -124,15 +130,32 @@ def decode(tokens_list, tokenizer, raw_text_len):
 
 
 def generate_sample(model, tokenizer, input_txt):
-    input_ids = tokenizer.encode(input_txt)
-    raw_text_len = len(input_ids)
-    context_enc = torch.tensor([input_ids]).to(model.device)
+    enc = tokenizer(
+        input_txt,
+        return_tensors="pt",
+        padding=False,       # single prompt → no extra pads
+        truncation=True
+    )
+    input_ids = enc["input_ids"].to(model.device)
+    attention_mask = enc["attention_mask"].to(model.device)
+
     print(f"Input text: {input_txt}\n")
     with torch.no_grad():
-        outputs = model.generate(context_enc)
-        output_text = decode(outputs, tokenizer, raw_text_len)[0]
-        print(f"\nOutput text: {output_text}\n")
-        return output_text
+        outputs = model.generate(
+            input_ids=input_ids,
+            attention_mask=attention_mask,         # ← IMPORTANT
+            do_sample=model.generation_config.do_sample,
+            temperature=model.generation_config.temperature,
+            top_p=model.generation_config.top_p,
+            max_new_tokens=model.generation_config.max_new_tokens,
+            pad_token_id=model.config.pad_token_id,
+            eos_token_id=model.config.eos_token_id,
+            use_cache=True,
+        )
+    # Decode only the generated tail (optional — your decode() also works)
+    text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    print(f"\nOutput text: {text}\n")
+    return text
 
 def generate_using_hf_model(model_path, prompts, gen_config):
     model, tokenizer = load_model(model_path, gen_config)

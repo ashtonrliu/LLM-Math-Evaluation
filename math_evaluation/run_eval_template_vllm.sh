@@ -8,6 +8,17 @@ set -x
 START_TIME=$(date +%s)
 export HF_ENDPOINT=https://hf-mirror.com
 
+# ------------------------------
+# CUDA environment configuration
+# ------------------------------
+export CUDA_DEVICE_ORDER=PCI_BUS_ID
+# For example, only use the three 4090s (adjust based on nvidia-smi output)
+export CUDA_VISIBLE_DEVICES=1,2,3
+# ------------------------------
+export HF_ENDPOINT=https://hf-mirror.com
+
+
+
 # 默认参数
 GRADE_METHOD=normal
 

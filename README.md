@@ -29,6 +29,7 @@ conda activate llm-math-evaluation
 
 pip install -r requirements.txt
 pip install flash_attn==2.7.0.post2
+pip install rogue
 ```
 
 ## Uasge
